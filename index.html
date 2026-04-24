@@ -1108,6 +1108,8 @@
         }
       });
 
+      updateSensorCardColors(data);
+
       // ── Timestamp ────────────────────────────────────────────
       document.getElementById("last-update").textContent =
         "Updated " + new Date().toLocaleTimeString();
@@ -2073,17 +2075,6 @@
   }
 
   // ─── Hook into fetchSensorData to color cards ────────────────
-  // Patch fetchSensorData to call updateSensorCardColors after data fetch
-  const _origFetchSensorData = fetchSensorData;
-  window.fetchSensorData = async function() {
-    try {
-      const res  = await fetch(`${API_BASE}/sensor-data`, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      updateSensorCardColors(data);
-    } catch(_) {}
-    return _origFetchSensorData();
-  };
 </script>
 
 <!-- Premium Parallax Effects -->
