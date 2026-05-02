@@ -949,7 +949,6 @@
     <button class="snav-btn" onclick="scrollToSec('sec-ph')">⚗️ pH</button>
     <button class="snav-btn" onclick="scrollToSec('sec-tds')">🧪 TDS</button>
     <button class="snav-btn" onclick="scrollToSec('sec-wl')">🪣 Level</button>
-    <button class="snav-btn" onclick="scrollToSec('sec-tank-config')">🪣 Tank</button>
     <button class="snav-btn" onclick="scrollToSec('sec-sun')">☀️ Light</button>
   </div>
 
@@ -1011,22 +1010,6 @@
       </div>
     </div>
 
-    <!-- ── Tank Configuration ───────────────────────────────── -->
-    <div class="settings-group" id="sec-tank-config">
-      <div class="settings-group-title">🪣 Tank Configuration</div>
-      <div class="settings-label">Tank Dimensions (for water volume calculation)</div>
-      <div class="settings-row">
-        <div class="settings-field"><label>Height (cm)</label><input type="number" id="s-tank-height" step="1" min="1" max="500" placeholder="30" /></div>
-        <div class="settings-field"><label>Width (cm)</label><input type="number" id="s-tank-width" step="1" min="1" max="500" placeholder="30" /></div>
-        <div class="settings-field"><label>Length (cm)</label><input type="number" id="s-tank-length" step="1" min="1" max="500" placeholder="30" /></div>
-      </div>
-      <div class="settings-label">Sensor Offset (cm)</div>
-      <div class="settings-row">
-        <div class="settings-field" style="flex:1; min-width:150px;"><label>Offset from bottom (cm)</label><input type="number" id="s-sensor-offset" step="0.1" min="0" max="100" placeholder="0" /></div>
-      </div>
-      <button class="btn-save" style="margin:0.5rem 0 0;" onclick="saveTankConfig()">✓ Save Tank Config</button>
-    </div>
-
         <!-- ── Water Level ───────────────────────────────────── -->
     <div class="settings-group" id="sec-wl">
       <div class="settings-group-title">🪣 Water Level <span style="font-weight:400; color:var(--text-muted);">(%)</span></div>
@@ -1081,6 +1064,49 @@
 
   </div><!-- /settings-section -->
 </div><!-- /settings-modal -->
+
+
+<!-- ════════════════════════════════════
+     TANK CONFIGURATION – Water Volume
+════════════════════════════════════ -->
+<section class="panel" id="tank-config-section">
+  <div class="panel-header">
+    <h2>🪣 Tank Configuration</h2>
+    <p>Enter your tank dimensions so the dashboard can convert ultrasonic readings into water volume</p>
+  </div>
+
+  <div class="panel-body">
+    <div class="settings-group" style="margin-bottom:0;">
+      <div class="settings-label">Tank Dimensions</div>
+      <div class="settings-row">
+        <div class="settings-field"><label>Height (cm)</label><input type="number" id="s-tank-height" step="1" min="1" max="500" placeholder="30" /></div>
+        <div class="settings-field"><label>Width (cm)</label><input type="number" id="s-tank-width" step="1" min="1" max="500" placeholder="30" /></div>
+        <div class="settings-field"><label>Length (cm)</label><input type="number" id="s-tank-length" step="1" min="1" max="500" placeholder="30" /></div>
+      </div>
+
+      <div class="settings-label">Sensor Offset</div>
+      <div class="settings-row">
+        <div class="settings-field" style="flex:1; min-width:150px;">
+          <label>Offset from bottom (cm)</label>
+          <input type="number" id="s-sensor-offset" step="0.1" min="0" max="100" placeholder="0" />
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin:1rem 0 1.25rem;">
+        <div style="background:rgba(34,215,122,0.07); border:1px solid rgba(34,215,122,0.15); border-radius:10px; padding:0.9rem;">
+          <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.35rem;">Tank Capacity</div>
+          <div style="font-size:1.4rem; font-weight:700; color:#22d77a;" id="tank-capacity-display">— L</div>
+        </div>
+        <div style="background:rgba(59,157,255,0.07); border:1px solid rgba(59,157,255,0.15); border-radius:10px; padding:0.9rem;">
+          <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.35rem;">Current Water Volume</div>
+          <div style="font-size:1.4rem; font-weight:700; color:#3b9dff;" id="tank-volume-display">— L</div>
+        </div>
+      </div>
+
+      <button class="btn-save" onclick="saveTankConfig()">✓ Save Tank Config</button>
+    </div>
+  </div>
+</section>
 
 
 <!-- ════════════════════════════════════════════════════════════
