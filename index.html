@@ -830,6 +830,96 @@
 
   </section>
 
+
+  <!-- ════════════════════════════════════
+       MONTHLY ANALYSIS – Sensor Trends
+  ════════════════════════════════════ -->
+  <section class="panel" id="monthly-analysis-section" style="display:none;">
+    <div class="panel-header">
+      <h2>📊 Monthly Sensor Analysis</h2>
+      <p>Daily average trends over the last 30 days</p>
+    </div>
+
+    <div class="panel-body">
+      <!-- Controls -->
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">
+        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; color:var(--text-secondary);">
+          <span>Days to analyze:</span>
+          <input type="number" id="monthly-days-input" value="30" min="7" max="90" style="width:70px; padding:4px 8px; border-radius:6px; border:1px solid rgba(56,148,255,0.2); background:rgba(56,148,255,0.05); color:#e8f0fe;" />
+        </label>
+        <button style="padding:8px 16px; border-radius:8px; border:1px solid rgba(56,148,255,0.3); background:rgba(56,148,255,0.1); color:#e8f0fe; cursor:pointer; font-weight:600;" onclick="loadMonthlyData()">↻ Refresh</button>
+      </div>
+
+      <!-- Summary Stats -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:2rem;">
+        <div style="background:rgba(255,140,66,0.08); border:1px solid rgba(255,140,66,0.2); border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.5rem;">Avg Temperature (°C)</div>
+          <div style="font-size:1.5rem; font-weight:700; color:#ff8c42;" id="monthly-avg-temp">—</div>
+        </div>
+        <div style="background:rgba(34,229,229,0.08); border:1px solid rgba(34,229,229,0.2); border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.5rem;">Avg Humidity (%)</div>
+          <div style="font-size:1.5rem; font-weight:700; color:#22e5e5;" id="monthly-avg-humidity">—</div>
+        </div>
+        <div style="background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.2); border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.5rem;">Avg pH</div>
+          <div style="font-size:1.5rem; font-weight:700; color:#a855f7;" id="monthly-avg-ph">—</div>
+        </div>
+        <div style="background:rgba(59,157,255,0.08); border:1px solid rgba(59,157,255,0.2); border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.5rem;">Avg TDS (ppm)</div>
+          <div style="font-size:1.5rem; font-weight:700; color:#3b9dff;" id="monthly-avg-tds">—</div>
+        </div>
+        <div style="background:rgba(34,215,122,0.08); border:1px solid rgba(34,215,122,0.2); border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.5rem;">Avg Water Level (%)</div>
+          <div style="font-size:1.5rem; font-weight:700; color:#22d77a;" id="monthly-avg-wl">—</div>
+        </div>
+        <div style="background:rgba(245,200,66,0.08); border:1px solid rgba(245,200,66,0.2); border-radius:8px; padding:1rem;">
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.5rem;">Avg Sunlight (%)</div>
+          <div style="font-size:1.5rem; font-weight:700; color:#f5c842;" id="monthly-avg-sun">—</div>
+        </div>
+      </div>
+
+      <!-- Monthly Charts -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:2rem; margin-bottom:2rem;">
+        <!-- Temperature -->
+        <div style="background:rgba(255,140,66,0.05); border:1px solid rgba(255,140,66,0.15); border-radius:12px; padding:1rem;">
+          <h4 style="margin:0 0 1rem; font-size:0.95rem; color:#ff8c42; font-weight:600;">🌡️ Temperature Trend</h4>
+          <div style="height:200px;"><canvas id="monthly-chart-temp"></canvas></div>
+        </div>
+        <!-- Humidity -->
+        <div style="background:rgba(34,229,229,0.05); border:1px solid rgba(34,229,229,0.15); border-radius:12px; padding:1rem;">
+          <h4 style="margin:0 0 1rem; font-size:0.95rem; color:#22e5e5; font-weight:600;">💧 Humidity Trend</h4>
+          <div style="height:200px;"><canvas id="monthly-chart-humidity"></canvas></div>
+        </div>
+        <!-- Water Level -->
+        <div style="background:rgba(34,215,122,0.05); border:1px solid rgba(34,215,122,0.15); border-radius:12px; padding:1rem;">
+          <h4 style="margin:0 0 1rem; font-size:0.95rem; color:#22d77a; font-weight:600;">🪣 Water Level Trend</h4>
+          <div style="height:200px;"><canvas id="monthly-chart-wl"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Detailed Daily Data Table -->
+      <div style="background:rgba(56,148,255,0.03); border:1px solid rgba(56,148,255,0.1); border-radius:12px; padding:1rem; overflow-x:auto;">
+        <h4 style="margin:0 0 1rem; font-size:0.95rem; color:#e8f0fe; font-weight:600;">📋 Daily Summary Data</h4>
+        <table id="monthly-data-table" style="width:100%; font-size:0.8rem; border-collapse:collapse;">
+          <thead style="border-bottom:1px solid rgba(56,148,255,0.2);">
+            <tr style="color:var(--text-secondary);">
+              <th style="text-align:left; padding:0.75rem;">Date</th>
+              <th style="text-align:center; padding:0.75rem; color:#ff8c42;">Temp °C</th>
+              <th style="text-align:center; padding:0.75rem; color:#22e5e5;">Humidity %</th>
+              <th style="text-align:center; padding:0.75rem; color:#a855f7;">pH</th>
+              <th style="text-align:center; padding:0.75rem; color:#3b9dff;">TDS ppm</th>
+              <th style="text-align:center; padding:0.75rem; color:#22d77a;">Water Lvl %</th>
+              <th style="text-align:center; padding:0.75rem; color:#f5c842;">Sunlight %</th>
+            </tr>
+          </thead>
+          <tbody id="monthly-table-body">
+            <tr><td colspan="7" style="text-align:center; padding:1rem; color:var(--text-muted);">Loading data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <!-- Toast -->
@@ -859,6 +949,7 @@
     <button class="snav-btn" onclick="scrollToSec('sec-ph')">⚗️ pH</button>
     <button class="snav-btn" onclick="scrollToSec('sec-tds')">🧪 TDS</button>
     <button class="snav-btn" onclick="scrollToSec('sec-wl')">🪣 Level</button>
+    <button class="snav-btn" onclick="scrollToSec('sec-tank-config')">🪣 Tank</button>
     <button class="snav-btn" onclick="scrollToSec('sec-sun')">☀️ Light</button>
   </div>
 
@@ -920,7 +1011,23 @@
       </div>
     </div>
 
-    <!-- ── Water Level ───────────────────────────────────── -->
+    <!-- ── Tank Configuration ───────────────────────────────── -->
+    <div class="settings-group" id="sec-tank-config">
+      <div class="settings-group-title">🪣 Tank Configuration</div>
+      <div class="settings-label">Tank Dimensions (for water volume calculation)</div>
+      <div class="settings-row">
+        <div class="settings-field"><label>Height (cm)</label><input type="number" id="s-tank-height" step="1" min="1" max="500" placeholder="30" /></div>
+        <div class="settings-field"><label>Width (cm)</label><input type="number" id="s-tank-width" step="1" min="1" max="500" placeholder="30" /></div>
+        <div class="settings-field"><label>Length (cm)</label><input type="number" id="s-tank-length" step="1" min="1" max="500" placeholder="30" /></div>
+      </div>
+      <div class="settings-label">Sensor Offset (cm)</div>
+      <div class="settings-row">
+        <div class="settings-field" style="flex:1; min-width:150px;"><label>Offset from bottom (cm)</label><input type="number" id="s-sensor-offset" step="0.1" min="0" max="100" placeholder="0" /></div>
+      </div>
+      <button class="btn-save" style="margin:0.5rem 0 0;" onclick="saveTankConfig()">✓ Save Tank Config</button>
+    </div>
+
+        <!-- ── Water Level ───────────────────────────────────── -->
     <div class="settings-group" id="sec-wl">
       <div class="settings-group-title">🪣 Water Level <span style="font-weight:400; color:var(--text-muted);">(%)</span></div>
       <div class="settings-label">Alert thresholds</div>
@@ -1778,8 +1885,15 @@
       fetchAndRenderPlants(),
     ]);
 
+    // Load tank configuration
+    await loadTankConfig();
+    updateWaterLevelDisplay();
+    await loadMonthlyData();  // Load and display monthly analysis
+
     // Polling intervals
     setInterval(fetchSensorData,          SENSOR_INTERVAL_MS);
+    setInterval(updateWaterLevelDisplay,   SENSOR_INTERVAL_MS);  // Update water level display with tank config
+    setInterval(loadMonthlyData,          5 * 60 * 1000);  // Refresh monthly analysis every 5 minutes
     setInterval(fetchAutoStatus,          AUTO_INTERVAL_MS);
     setInterval(fetchAIResult,            AI_INTERVAL_MS);
     setInterval(refreshCameraImage,       IMAGE_INTERVAL_MS);
@@ -2003,7 +2117,239 @@
     }
   }
 
-  // ─── Create new custom plant ──────────────────────────────────
+
+  // ─── Tank Configuration Functions ────────────────────────────────────────
+// Tank Configuration Functions
+
+// Load tank configuration from server
+async function loadTankConfig() {
+  try {
+    const res = await fetch(`${API_BASE}/tank-config`);
+    if (res.ok) {
+      const cfg = await res.json();
+      const setField = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+      };
+      setField('s-tank-height', cfg.tank_height_cm);
+      setField('s-tank-width', cfg.tank_width_cm);
+      setField('s-tank-length', cfg.tank_length_cm);
+      setField('s-sensor-offset', cfg.sensor_offset_cm);
+    }
+  } catch (e) {
+    console.warn('[TANK] Failed to load tank config:', e);
+  }
+}
+
+// Save tank configuration to server
+async function saveTankConfig() {
+  const get = id => {
+    const v = document.getElementById(id)?.value;
+    return v !== '' && v !== null ? parseFloat(v) : undefined;
+  };
+
+  const height = get('s-tank-height');
+  const width = get('s-tank-width');
+  const length = get('s-tank-length');
+  const offset = get('s-sensor-offset');
+
+  if (!height || !width || !length || height <= 0 || width <= 0 || length <= 0) {
+    showToast('⚠️', 'Tank dimensions must be positive numbers');
+    return;
+  }
+
+  const payload = {
+    tank_height_cm: height,
+    tank_width_cm: width,
+    tank_length_cm: length,
+    sensor_offset_cm: offset || 0,
+  };
+
+  const buttons = document.querySelectorAll('[onclick="saveTankConfig()"]');
+  buttons.forEach(b => { b.textContent = 'Saving…'; b.disabled = true; });
+
+  try {
+    const res = await fetch(`${API_BASE}/tank-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const tankVolume = (data.tank_height_cm * data.tank_width_cm * data.tank_length_cm) / 1000;
+      showToast('✅', `Tank config saved: ${tankVolume.toFixed(1)}L capacity`);
+      updateWaterLevelDisplay();
+    } else {
+      const err = await res.json();
+      showToast('❌', err.error || 'Save failed');
+    }
+  } catch (e) {
+    showToast('❌', 'Network error while saving tank config');
+  } finally {
+    buttons.forEach(b => { b.textContent = '✓ Save Tank Config'; b.disabled = false; });
+  }
+}
+
+// Update water level display with actual volume
+async function updateWaterLevelDisplay() {
+  try {
+    const res = await fetch(`${API_BASE}/water-level-liters`);
+    if (res.ok) {
+      const data = await res.json();
+      const wlEl = document.getElementById('water-level');
+      const wlBar = document.getElementById('bar-water-level');
+      if (wlEl) {
+        wlEl.innerHTML = `${data.water_volume_liters}<span class="sensor-unit">L</span><div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">of ${data.tank_capacity_liters}L</div>`;
+        wlEl.style.color = data.water_level_percent < 20
+          ? 'var(--accent-red)'
+          : (data.water_level_percent < 40 ? 'var(--accent-yellow)' : 'var(--accent-cyan)');
+      }
+      if (wlBar) wlBar.style.width = data.water_level_percent + '%';
+    }
+  } catch (e) {
+    console.warn('[TANK] Failed to update water level:', e);
+  }
+}
+
+
+  
+  // ─── Load Monthly Data ────────────────────────────────────────
+  async function loadMonthlyData() {
+    const daysInput = document.getElementById('monthly-days-input');
+    const days = daysInput ? parseInt(daysInput.value) : 30;
+    
+    try {
+      const res = await fetch(`${API_BASE}/monthly-data?days=${days}`);
+      if (!res.ok) {
+        console.warn('[MONTHLY] Failed to load monthly data:', res.status);
+        return;
+      }
+      
+      const data = await res.json();
+      if (!data.labels || !data.datasets) {
+        console.warn('[MONTHLY] Invalid monthly data structure');
+        return;
+      }
+      
+      // Update summary stats
+      const updateStat = (elementId, values) => {
+        if (values && values.length > 0) {
+          const avg = values.reduce((a, b) => a + b, 0) / values.length;
+          const el = document.getElementById(elementId);
+          if (el) el.textContent = avg.toFixed(1);
+        }
+      };
+      
+      updateStat('monthly-avg-temp', data.datasets.air_temperature);
+      updateStat('monthly-avg-humidity', data.datasets.humidity);
+      updateStat('monthly-avg-ph', data.datasets.ph);
+      updateStat('monthly-avg-tds', data.datasets.tds);
+      updateStat('monthly-avg-wl', data.datasets.water_level);
+      updateStat('monthly-avg-sun', data.datasets.sunlight);
+      
+      // Update Charts
+      updateMonthlyChart('monthly-chart-temp', data.labels, data.datasets.air_temperature, '🌡️ Temperature (°C)', '#ff8c42');
+      updateMonthlyChart('monthly-chart-humidity', data.labels, data.datasets.humidity, '💧 Humidity (%)', '#22e5e5');
+      updateMonthlyChart('monthly-chart-wl', data.labels, data.datasets.water_level, '🪣 Water Level (%)', '#22d77a');
+      
+      // Update Table
+      updateMonthlyDataTable(data);
+      
+      // Show the section if hidden
+      const section = document.getElementById('monthly-analysis-section');
+      if (section) section.style.display = 'block';
+      
+    } catch (e) {
+      console.error('[MONTHLY] Error loading data:', e);
+      showToast('❌', 'Failed to load monthly data');
+    }
+  }
+
+  // ─── Update Monthly Chart ────────────────────────────────────
+  function updateMonthlyChart(canvasId, labels, values, title, color) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    
+    // Destroy existing chart if any
+    if (ctx._chart) {
+      ctx._chart.destroy();
+    }
+    
+    const filteredLabels = labels.filter((_, i) => i % Math.ceil(labels.length / 10) === 0 || i === labels.length - 1);
+    const filteredValues = values ? values.map((v, i) => (i % Math.ceil(labels.length / 10) === 0 || i === labels.length - 1) ? v : null).filter(v => v !== null) : [];
+    
+    ctx._chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: filteredLabels,
+        datasets: [{
+          label: title,
+          data: filteredValues,
+          borderColor: color,
+          backgroundColor: color + '20',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+          pointBackgroundColor: color,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: { color: 'rgba(232,240,254,0.8)', font: { size: 11 } }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { color: 'rgba(232,240,254,0.6)', font: { size: 10 } },
+            grid: { color: 'rgba(56,148,255,0.08)' }
+          },
+          x: {
+            ticks: { color: 'rgba(232,240,254,0.6)', font: { size: 10 } },
+            grid: { color: 'rgba(56,148,255,0.08)' }
+          }
+        }
+      }
+    });
+  }
+
+  // ─── Update Monthly Data Table ───────────────────────────────
+  function updateMonthlyDataTable(data) {
+    const tbody = document.getElementById('monthly-table-body');
+    if (!tbody) return;
+    
+    let html = '';
+    for (let i = 0; i < data.labels.length; i++) {
+      const label = data.labels[i];
+      const temp = data.datasets.air_temperature?.[i] ?? '—';
+      const hum = data.datasets.humidity?.[i] ?? '—';
+      const ph = data.datasets.ph?.[i] ?? '—';
+      const tds = data.datasets.tds?.[i] ?? '—';
+      const wl = data.datasets.water_level?.[i] ?? '—';
+      const sun = data.datasets.sunlight?.[i] ?? '—';
+      
+      const format = (v) => typeof v === 'number' ? v.toFixed(1) : v;
+      
+      html += `<tr style="border-bottom:1px solid rgba(56,148,255,0.08);">
+        <td style="text-align:left; padding:0.75rem; color:var(--text-secondary);">${label}</td>
+        <td style="text-align:center; padding:0.75rem; color:#ff8c42;">${format(temp)}</td>
+        <td style="text-align:center; padding:0.75rem; color:#22e5e5;">${format(hum)}</td>
+        <td style="text-align:center; padding:0.75rem; color:#a855f7;">${format(ph)}</td>
+        <td style="text-align:center; padding:0.75rem; color:#3b9dff;">${format(tds)}</td>
+        <td style="text-align:center; padding:0.75rem; color:#22d77a;">${format(wl)}</td>
+        <td style="text-align:center; padding:0.75rem; color:#f5c842;">${format(sun)}</td>
+      </tr>`;
+    }
+    tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding:1rem; color:var(--text-muted);">No data available</td></tr>';
+  }
+
+
+    // ─── Create new custom plant ──────────────────────────────────
   async function createNewPlant() {
     const get    = id => document.getElementById(id)?.value?.trim();
     const getNum = id => parseFloat(document.getElementById(id)?.value);
