@@ -203,30 +203,6 @@
       background: linear-gradient(135deg,#22d77a,#15a058);
     }
 
-    .dashboard-nav {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      padding: 0.75rem 1rem 0;
-    }
-    .dashboard-nav a {
-      text-decoration: none;
-      padding: 0.55rem 0.9rem;
-      border-radius: 999px;
-      border: 1px solid rgba(56,148,255,0.18);
-      background: rgba(56,148,255,0.05);
-      color: var(--text-secondary);
-      font-size: 0.78rem;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    .dashboard-nav a:hover,
-    .dashboard-nav a.active {
-      background: rgba(56,148,255,0.18);
-      border-color: rgba(56,148,255,0.45);
-      color: #e8f0fe;
-    }
-
     /* Sensor card out-of-range glow */
     .sensor-card.alert-warn {
       border-color: rgba(245,200,66,0.55) !important;
@@ -280,12 +256,6 @@
      HEADER
 ════════════════════════════════════════════════════════════ -->
 <header>
-
-<div class="dashboard-nav" aria-label="Dashboard page navigation">
-  <a href="sensors.html" data-dashboard-page="sensors">Sensors</a>
-  <a href="graphs.html" data-dashboard-page="graphs">Graphs</a>
-  <a href="ai.html" data-dashboard-page="ai">AI Analysis</a>
-</div>
   <div class="header-inner">
     <div class="logo">
       <div class="logo-icon">🌿</div>
@@ -979,7 +949,6 @@
     <button class="snav-btn" onclick="scrollToSec('sec-ph')">⚗️ pH</button>
     <button class="snav-btn" onclick="scrollToSec('sec-tds')">🧪 TDS</button>
     <button class="snav-btn" onclick="scrollToSec('sec-wl')">🪣 Level</button>
-    <button class="snav-btn" onclick="scrollToSec('sec-tank-config')">🪣 Tank</button>
     <button class="snav-btn" onclick="scrollToSec('sec-sun')">☀️ Light</button>
   </div>
 
@@ -1041,22 +1010,6 @@
       </div>
     </div>
 
-    <!-- ── Tank Configuration ───────────────────────────────── -->
-    <div class="settings-group" id="sec-tank-config">
-      <div class="settings-group-title">🪣 Tank Configuration</div>
-      <div class="settings-label">Tank Dimensions (for water volume calculation)</div>
-      <div class="settings-row">
-        <div class="settings-field"><label>Height (cm)</label><input type="number" id="s-tank-height" step="1" min="1" max="500" placeholder="30" /></div>
-        <div class="settings-field"><label>Width (cm)</label><input type="number" id="s-tank-width" step="1" min="1" max="500" placeholder="30" /></div>
-        <div class="settings-field"><label>Length (cm)</label><input type="number" id="s-tank-length" step="1" min="1" max="500" placeholder="30" /></div>
-      </div>
-      <div class="settings-label">Sensor Offset (cm)</div>
-      <div class="settings-row">
-        <div class="settings-field" style="flex:1; min-width:150px;"><label>Offset from bottom (cm)</label><input type="number" id="s-sensor-offset" step="0.1" min="0" max="100" placeholder="0" /></div>
-      </div>
-      <button class="btn-save" style="margin:0.5rem 0 0;" onclick="saveTankConfig()">✓ Save Tank Config</button>
-    </div>
-
         <!-- ── Water Level ───────────────────────────────────── -->
     <div class="settings-group" id="sec-wl">
       <div class="settings-group-title">🪣 Water Level <span style="font-weight:400; color:var(--text-muted);">(%)</span></div>
@@ -1113,6 +1066,49 @@
 </div><!-- /settings-modal -->
 
 
+<!-- ════════════════════════════════════
+     TANK CONFIGURATION – Water Volume
+════════════════════════════════════ -->
+<section class="panel" id="tank-config-section">
+  <div class="panel-header">
+    <h2>🪣 Tank Configuration</h2>
+    <p>Enter your tank dimensions so the dashboard can convert ultrasonic readings into water volume</p>
+  </div>
+
+  <div class="panel-body">
+    <div class="settings-group" style="margin-bottom:0;">
+      <div class="settings-label">Tank Dimensions</div>
+      <div class="settings-row">
+        <div class="settings-field"><label>Height (cm)</label><input type="number" id="s-tank-height" step="1" min="1" max="500" placeholder="30" /></div>
+        <div class="settings-field"><label>Width (cm)</label><input type="number" id="s-tank-width" step="1" min="1" max="500" placeholder="30" /></div>
+        <div class="settings-field"><label>Length (cm)</label><input type="number" id="s-tank-length" step="1" min="1" max="500" placeholder="30" /></div>
+      </div>
+
+      <div class="settings-label">Sensor Offset</div>
+      <div class="settings-row">
+        <div class="settings-field" style="flex:1; min-width:150px;">
+          <label>Offset from bottom (cm)</label>
+          <input type="number" id="s-sensor-offset" step="0.1" min="0" max="100" placeholder="0" />
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin:1rem 0 1.25rem;">
+        <div style="background:rgba(34,215,122,0.07); border:1px solid rgba(34,215,122,0.15); border-radius:10px; padding:0.9rem;">
+          <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.35rem;">Tank Capacity</div>
+          <div style="font-size:1.4rem; font-weight:700; color:#22d77a;" id="tank-capacity-display">— L</div>
+        </div>
+        <div style="background:rgba(59,157,255,0.07); border:1px solid rgba(59,157,255,0.15); border-radius:10px; padding:0.9rem;">
+          <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.35rem;">Current Water Volume</div>
+          <div style="font-size:1.4rem; font-weight:700; color:#3b9dff;" id="tank-volume-display">— L</div>
+        </div>
+      </div>
+
+      <button class="btn-save" onclick="saveTankConfig()">✓ Save Tank Config</button>
+    </div>
+  </div>
+</section>
+
+
 <!-- ════════════════════════════════════════════════════════════
      JAVASCRIPT
 ════════════════════════════════════════════════════════════ -->
@@ -1123,58 +1119,6 @@
   const AUTO_INTERVAL_MS    = 2000;     // Fetch autonomous status every 2 s
   const AI_INTERVAL_MS      = 7000;     // Fetch AI result every 7 s
   const IMAGE_INTERVAL_MS   = 12000;    // Refresh camera image every 12 s
-
-  const DASHBOARD_PAGE = (() => {
-    const currentFile = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
-    if (currentFile === 'graphs.html') return 'graphs';
-    if (currentFile === 'ai.html') return 'ai';
-    return 'sensors';
-  })();
-
-  function applyPageLayout() {
-    const main = document.querySelector('main');
-    if (!main) return;
-
-    const hide = (element) => { if (element) element.style.display = 'none'; };
-    const showNavActive = () => {
-      document.querySelectorAll('.dashboard-nav a').forEach(link => {
-        link.classList.toggle('active', link.dataset.dashboardPage === DASHBOARD_PAGE);
-      });
-    };
-
-    const titleByPage = {
-      sensors: 'HydroAI — Sensors',
-      graphs: 'HydroAI — Graphs',
-      ai: 'HydroAI — AI Analysis',
-    };
-    document.title = titleByPage[DASHBOARD_PAGE] || document.title;
-
-    if (DASHBOARD_PAGE === 'graphs') {
-      Array.from(main.children).forEach(child => {
-        if (!child.classList.contains('analytics-section') && child.id !== 'monthly-analysis-section') {
-          child.style.display = 'none';
-        }
-      });
-      hide(document.getElementById('settings-overlay'));
-      hide(document.getElementById('settings-modal'));
-    } else if (DASHBOARD_PAGE === 'ai') {
-      Array.from(main.children).forEach(child => {
-        if (!child.classList.contains('bottom-grid')) {
-          child.style.display = 'none';
-        }
-      });
-      hide(document.querySelector('.controls-panel'));
-      hide(document.getElementById('settings-overlay'));
-      hide(document.getElementById('settings-modal'));
-    } else {
-      hide(document.querySelector('.analytics-section'));
-      hide(document.getElementById('monthly-analysis-section'));
-      hide(document.querySelector('.camera-card'));
-      hide(document.querySelector('.ai-card'));
-    }
-
-    showNavActive();
-  }
 
   // ─── State ─────────────────────────────────────────────────────
   const controls = { pump: true, light: false, mist: false, shed: false };
@@ -1956,8 +1900,6 @@
     // Pump toggle locked ON at start
     const pumpToggle = document.getElementById('toggle-pump');
     if (pumpToggle) { pumpToggle.checked = true; pumpToggle.disabled = true; }
-
-    applyPageLayout();
 
     // Init charts
     initCharts();
