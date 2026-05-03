@@ -408,10 +408,19 @@
     <div class="controls-panel">
 
       <div class="card" style="padding: 1.25rem 1.25rem 0.75rem;">
-        <div class="panel-header">⚡ Actuator Controls
-          <span class="auto-badge" style="margin-left:auto;">🤖 Auto Mode</span>
+        <div class="panel-header" style="align-items: center; justify-content: space-between;">
+          <span>⚡ Actuator Controls</span>
+          
+          <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(56,148,255,0.05); padding: 4px 8px; border-radius: 20px; border: 1px solid rgba(56,148,255,0.15);">
+            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;">System Mode:</span>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-auto-mode" onchange="toggleAutoMode(this.checked)" checked />
+              <span class="toggle-slider"></span>
+            </label>
+            <span id="auto-mode-label" style="font-size: 0.75rem; color: var(--accent-green); font-weight: 700;">Auto</span>
+          </div>
         </div>
-        <p style="font-size:0.72rem; color:var(--text-muted); margin-bottom:1rem;">ESP32 controls autonomously · Dashboard sends temporary overrides (30 s)</p>
+        <p style="font-size:0.72rem; color:var(--text-muted); margin-bottom:1rem;">Auto mode: ESP32 runs autonomously. Manual mode: You have full control.</p>
 
         <!-- Pump (always on, locked) -->
         <div class="control-row pump-locked" id="row-pump" title="Pump always runs continuously — cannot be turned off">
@@ -1260,6 +1269,19 @@
         controls[key] = info.state;
       });
 
+      // ── Auto/Manual Mode Sync ─────────────────────────────────
+      if (data.auto_mode !== undefined) {
+        const amToggle = document.getElementById('toggle-auto-mode');
+        const amLabel  = document.getElementById('auto-mode-label');
+        if (amToggle && amToggle.checked !== data.auto_mode) {
+          amToggle.checked = data.auto_mode;
+        }
+        if (amLabel) {
+          amLabel.textContent = data.auto_mode ? 'Auto' : 'Manual';
+          amLabel.style.color = data.auto_mode ? 'var(--accent-green)' : 'var(--accent-yellow)';
+        }
+      }
+
       // ── Shed alert banner ─────────────────────────────────────
       const shedInfo   = data.shed;
       const alertEl    = document.getElementById('shed-alert');
@@ -1400,6 +1422,36 @@
       // Revert toggle
       controls[key] = !value;
       updateControlUI(key, !value);
+    }
+  }
+
+  async function toggleAutoMode(isAuto) {
+    const amLabel = document.getElementById('auto-mode-label');
+    if (amLabel) {
+      amLabel.textContent = isAuto ? 'Auto' : 'Manual';
+      amLabel.style.color = isAuto ? 'var(--accent-green)' : 'var(--accent-yellow)';
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/dashboard-settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_mode: isAuto })
+      });
+      if (res.ok) {
+        showToast("⚙️", `System switched to ${isAuto ? "Auto" : "Manual"} Mode`);
+      } else {
+        throw new Error("Save failed");
+      }
+    } catch (err) {
+      console.error("[AUTO MODE] Failed to save:", err);
+      showToast("❌", "Failed to save System Mode");
+      // Revert toggle
+      document.getElementById('toggle-auto-mode').checked = !isAuto;
+      if (amLabel) {
+        amLabel.textContent = !isAuto ? 'Auto' : 'Manual';
+        amLabel.style.color = !isAuto ? 'var(--accent-green)' : 'var(--accent-yellow)';
+      }
     }
   }
 
