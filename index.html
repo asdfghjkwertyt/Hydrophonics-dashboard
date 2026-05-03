@@ -413,7 +413,7 @@
           
           <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(56,148,255,0.05); padding: 4px 8px; border-radius: 20px; border: 1px solid rgba(56,148,255,0.15);">
             <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;">System Mode:</span>
-            <label class="toggle">
+            <label class="toggle" onclick="event.stopPropagation()">
               <input type="checkbox" id="toggle-auto-mode" onchange="toggleAutoMode(this.checked)" checked />
               <span class="toggle-slider"></span>
             </label>
@@ -485,7 +485,7 @@
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
           <div class="shed-badge closed" id="shed-badge">● CLOSED</div>
-          <label class="toggle">
+          <label class="toggle" onclick="event.stopPropagation()">
             <input type="checkbox" id="toggle-shed" onchange="onToggleChange('shed', this.checked)" />
             <span class="toggle-slider"></span>
           </label>
@@ -557,9 +557,9 @@
 
   </div><!-- /.bottom-grid -->
 
-  <!-- ════════════════════════════════════════════════════════════
+  <!-- ════════════════════════════════════
        ANALYTICS SECTION
-  ════════════════════════════════════════════════════════════ -->
+  ════════════════════════════════════ -->
   <section class="analytics-section" aria-label="Sensor graphs and analytics">
     <p class="section-title" style="margin-bottom:1rem;">&#x1F4CA; Plant Analytics &amp; Sensor Graphs</p>
 
@@ -1113,7 +1113,7 @@
   const locks = {
     pump: 0, light: 0, mist: 0, shed: 0, auto: 0
   };
-  const LOCK_DURATION = 6000; // 6 seconds lockout after manual action
+  const LOCK_DURATION = 10000; // 10 seconds lockout after manual action
 
   // ─── Helpers ───────────────────────────────────────────────────
   function fmt(val, decimals=1) {
