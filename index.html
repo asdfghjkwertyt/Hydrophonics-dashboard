@@ -1398,6 +1398,7 @@
   async function onToggleChange(key, value) {
     controls[key] = value;
     updateControlUI(key, value);
+    setControlBadge(key, key === 'pump' ? 'always-on' : 'override');
 
     try {
       const body = {};
@@ -1478,6 +1479,21 @@
         badge.textContent = value ? "● OPEN" : "● CLOSED";
       }
     }
+  }
+
+  function setControlBadge(key, mode) {
+    const badge = document.getElementById(`badge-${key}`);
+    if (!badge) return;
+
+    if (key === 'pump') {
+      badge.className = 'auto-badge always-on';
+      badge.textContent = '● Always ON';
+      return;
+    }
+
+    const isOverride = mode === 'override';
+    badge.className = `auto-badge${isOverride ? ' override' : ''}`;
+    badge.textContent = isOverride ? '⚠ Override' : 'Auto';
   }
 
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
