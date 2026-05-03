@@ -1109,6 +1109,12 @@
   let lastImageTs  = null;
   let connectionOk = true;
 
+  // Track manual actions to prevent UI flicker (fighting with background fetch)
+  const locks = {
+    pump: 0, light: 0, mist: 0, shed: 0, auto: 0
+  };
+  const LOCK_DURATION = 6000; // 6 seconds lockout after manual action
+
   // ─── Helpers ───────────────────────────────────────────────────
   function fmt(val, decimals=1) {
     return (val === null || val === undefined || isNaN(val))
@@ -1221,8 +1227,11 @@
       const actuators = ["pump", "light", "mist", "shed"];
       actuators.forEach(key => {
         if (data[key] !== undefined) {
-          updateControlUI(key, data[key]);
-          controls[key] = data[key];
+          // Only update if not recently toggled by user (prevent flicker)
+          if (Date.now() > (locks[key] || 0)) {
+            updateControlUI(key, data[key]);
+            controls[key] = data[key];
+          }
         }
       });
 
@@ -1264,17 +1273,21 @@
           badgeEl.textContent = isOverride ? '⚠ Override' : (key === 'pump' ? '● Always ON' : 'Auto');
         }
 
-        // Keep toggle in sync
-        updateControlUI(key, info.state);
-        controls[key] = info.state;
+        // Only update if not recently toggled by user (prevent flicker)
+        if (Date.now() > (locks[key] || 0)) {
+          updateControlUI(key, info.state);
+          controls[key] = info.state;
+        }
       });
 
       // ── Auto/Manual Mode Sync ─────────────────────────────────
-      if (data.auto_mode !== undefined) {
+      if (data.auto_mode !== undefined && Date.now() > (locks.auto || 0)) {
         const amToggle = document.getElementById('toggle-auto-mode');
         const amLabel  = document.getElementById('auto-mode-label');
         if (amToggle && amToggle.checked !== data.auto_mode) {
           amToggle.checked = data.auto_mode;
+          // Update pump interactiveness based on auto_mode
+          updatePumpLockState(data.auto_mode);
         }
         if (amLabel) {
           amLabel.textContent = data.auto_mode ? 'Auto' : 'Manual';
@@ -1396,9 +1409,15 @@
 
   // ─── Control Toggles ───────────────────────────────────────────
   async function onToggleChange(key, value) {
+    // Lock this control from background updates for a few seconds
+    locks[key] = Date.now() + LOCK_DURATION;
     controls[key] = value;
     updateControlUI(key, value);
-    setControlBadge(key, key === 'pump' ? 'always-on' : 'override');
+    
+    // Only show override badge for things that are normally auto
+    if (key !== 'pump') {
+      setControlBadge(key, 'override');
+    }
 
     try {
       const body = {};
@@ -1427,11 +1446,17 @@
   }
 
   async function toggleAutoMode(isAuto) {
+    // Lock auto mode from background updates
+    locks.auto = Date.now() + LOCK_DURATION;
+
     const amLabel = document.getElementById('auto-mode-label');
     if (amLabel) {
       amLabel.textContent = isAuto ? 'Auto' : 'Manual';
       amLabel.style.color = isAuto ? 'var(--accent-green)' : 'var(--accent-yellow)';
     }
+
+    // Enable/Disable pump control based on mode
+    updatePumpLockState(isAuto);
 
     try {
       const res = await fetch(`${API_BASE}/dashboard-settings`, {
@@ -1497,6 +1522,32 @@
   }
 
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function updatePumpLockState(isAuto) {
+    const row  = document.getElementById('row-pump');
+    const tgl  = document.getElementById('toggle-pump');
+    const bge  = row ? row.querySelector('.always-on') : null;
+
+    if (isAuto) {
+      if (row) {
+        row.classList.add('pump-locked');
+        row.onclick = null;
+        row.title = "Pump always runs continuously in Auto mode — switch to Manual to control.";
+      }
+      if (tgl) {
+        tgl.disabled = true;
+      }
+      if (bge) bge.style.display = 'inline-block';
+    } else {
+      if (row) {
+        row.classList.remove('pump-locked');
+        row.onclick = () => toggleControl('pump');
+        row.title = "Manual pump control active";
+      }
+      if (tgl) tgl.disabled = false;
+      if (bge) bge.style.display = 'none';
+    }
+  }
 
   // ─── Chart Tab Switching ─────────────────────────────────────────
   const TABS = ['env', 'water', 'light', 'actuators', 'patterns'];
