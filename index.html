@@ -1004,6 +1004,134 @@ function birdWarble(t=0){
   });
 }
 
+/* ── Stem growing ────────────────────────────────────────────── */
+// Plays as the stem draws upward (1.6s duration from t=0.5)
+function stemGrow(t=0){
+  const a=getAC(); const now=a.currentTime+t;
+  const dur=1.65;
+
+  // Organic rising tone — like a vine creeping (very low, slowly rising)
+  const o=a.createOscillator(), g=a.createGain();
+  o.connect(g); g.connect(master); toReverb(g);
+  o.type='triangle';
+  o.frequency.setValueAtTime(60, now);
+  o.frequency.linearRampToValueAtTime(180, now+dur*0.6);
+  o.frequency.linearRampToValueAtTime(220, now+dur);
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.055, now+0.18);
+  g.gain.setValueAtTime(0.055, now+dur*0.7);
+  g.gain.linearRampToValueAtTime(0, now+dur);
+  o.start(now); o.stop(now+dur+0.05);
+
+  // Soft woody texture (filtered short burst noise repeated)
+  for(let k=0;k<6;k++){
+    const off=now+k*(dur/6)*0.85;
+    const len=Math.floor(a.sampleRate*0.12);
+    const buf=a.createBuffer(1,len,a.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.2);
+    const src=a.createBufferSource(); src.buffer=buf;
+    const f=a.createBiquadFilter(); f.type='bandpass';
+    f.frequency.value=200+k*60; f.Q.value=2;
+    const gn=a.createGain(); gn.gain.value=0.045-k*0.005;
+    src.connect(f); f.connect(gn); gn.connect(master);
+    src.start(off); src.stop(off+0.14);
+  }
+
+  // Gentle water-celery creak (high overtone shimmer as stem forms)
+  const o2=a.createOscillator(), g2=a.createGain();
+  o2.connect(g2); g2.connect(master);
+  o2.type='sine';
+  o2.frequency.setValueAtTime(520, now+0.1);
+  o2.frequency.linearRampToValueAtTime(780, now+dur*0.5);
+  o2.frequency.linearRampToValueAtTime(660, now+dur);
+  g2.gain.setValueAtTime(0, now+0.1);
+  g2.gain.linearRampToValueAtTime(0.022, now+0.3);
+  g2.gain.linearRampToValueAtTime(0.012, now+dur*0.8);
+  g2.gain.linearRampToValueAtTime(0, now+dur);
+  o2.start(now+0.1); o2.stop(now+dur+0.05);
+}
+
+/* ── Leaf unfurl ─────────────────────────────────────────────── */
+// Called for each leaf; size 1=small, 2=medium, 3=large
+function leafUnfurl(t=0, size=2){
+  const a=getAC(); const now=a.currentTime+t;
+
+  // Organic "fwip" — burst of high-passed noise shaped into a pop
+  const len=Math.floor(a.sampleRate*0.22);
+  const buf=a.createBuffer(2,len,a.sampleRate);
+  for(let c=0;c<2;c++){
+    const d=buf.getChannelData(c);
+    for(let i=0;i<len;i++){
+      const env=Math.pow(Math.sin(Math.PI*i/len), 0.4) * Math.exp(-i/(len*0.35));
+      d[i]=(Math.random()*2-1)*env;
+    }
+  }
+  const src=a.createBufferSource(); src.buffer=buf;
+  const hp=a.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1800-size*150; hp.Q.value=0.5;
+  const lp=a.createBiquadFilter(); lp.type='lowpass';  lp.frequency.value=7000+size*400;
+  const gn=a.createGain(); gn.gain.value=0.18+size*0.04;
+  src.connect(hp); hp.connect(lp); lp.connect(gn); gn.connect(master);
+  src.start(now); src.stop(now+0.24);
+  toReverb(gn);
+
+  // Resonant tonal "ping" on the fwip attack
+  const freq=[420, 360, 300][size-1] || 360;
+  const o=a.createOscillator(), g=a.createGain();
+  o.connect(g); g.connect(master);
+  o.type='sine'; o.frequency.value=freq*(0.95+Math.random()*0.1);
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.06+size*0.015, now+0.006);
+  g.gain.exponentialRampToValueAtTime(0.001, now+0.22);
+  o.start(now); o.stop(now+0.25);
+  toReverb(g);
+
+  // Tiny high shimmer on release (sap spring-back)
+  const o2=a.createOscillator(), g2=a.createGain();
+  o2.connect(g2); g2.connect(master);
+  o2.type='sine'; o2.frequency.value=freq*3.2*(0.96+Math.random()*0.08);
+  g2.gain.setValueAtTime(0, now+0.04);
+  g2.gain.linearRampToValueAtTime(0.025, now+0.055);
+  g2.gain.exponentialRampToValueAtTime(0.001, now+0.18);
+  o2.start(now+0.04); o2.stop(now+0.2);
+}
+
+/* ── Bud bloom ───────────────────────────────────────────────── */
+// Crystalline sparkle when the glowing bud appears at top
+function budBloom(t=0){
+  const a=getAC(); const now=a.currentTime+t;
+
+  // Rising crystal tones (like ice forming / light crystallizing)
+  [1047,1319,1568,2093,2637].forEach((f,i)=>{
+    const off=now+i*0.055;
+    const o=a.createOscillator(), g=a.createGain();
+    o.connect(g); g.connect(master); toReverb(g);
+    o.type='sine'; o.frequency.setValueAtTime(f*0.88, off);
+    o.frequency.linearRampToValueAtTime(f, off+0.04);
+    g.gain.setValueAtTime(0, off);
+    g.gain.linearRampToValueAtTime(0.1-i*0.012, off+0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, off+0.8+i*0.1);
+    o.start(off); o.stop(off+1.0);
+    // Bright shimmer partial
+    const o2=a.createOscillator(), g2=a.createGain();
+    o2.connect(g2); g2.connect(master);
+    o2.type='sine'; o2.frequency.value=f*2.003;
+    g2.gain.setValueAtTime(0, off+0.008);
+    g2.gain.linearRampToValueAtTime(0.025, off+0.02);
+    g2.gain.exponentialRampToValueAtTime(0.001, off+0.3);
+    o2.start(off+0.008); o2.stop(off+0.35);
+  });
+
+  // Soft "life awakening" low swell under the sparkle
+  const o=a.createOscillator(), g=a.createGain();
+  o.connect(g); g.connect(master); toReverb(g);
+  o.type='triangle'; o.frequency.value=131;
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.04, now+0.15);
+  g.gain.exponentialRampToValueAtTime(0.001, now+1.4);
+  o.start(now); o.stop(now+1.5);
+}
+
 /* ── Sensor ping ────────────────────────────────────────────── */
 function sensorPing(t=0, tone=880){
   const a=getAC(); const now=a.currentTime+t;
@@ -1074,7 +1202,22 @@ function go(){
     [1.2,2.0,3.1,4.5,6.0,7.8,9.5,12,15,18].forEach(t=>bubble(t));
     // Drips
     [0.7,1.5,2.3,3.4,4.8,6.5,8.0,10.5,13,16].forEach(t=>drip(t));
-    // Rustles as leaves appear
+    // ── PLANT FORMATION SOUNDS ──────────────────────────────
+    // Stem draws from 0.5s → 2.1s
+    stemGrow(0.5);
+    // Each leaf unfurls — matched to CSS animation-delay values
+    leafUnfurl(1.55, 2);   // np-ll1 left
+    leafUnfurl(1.7,  2);   // np-rl1 right
+    leafUnfurl(1.85, 2);   // np-ll2 left
+    leafUnfurl(2.0,  2);   // np-rl2 right
+    leafUnfurl(2.1,  1);   // np-ll3 left (high, smaller)
+    leafUnfurl(2.25, 1);   // np-rl3 right
+    leafUnfurl(2.4,  3);   // np-cl1 crown (biggest)
+    leafUnfurl(2.5,  3);   // np-cl2 crown
+    // Bud sparkling into existence
+    budBloom(2.65);
+    // ─────────────────────────────────────────────────────────
+    // Ambient rustles layered under the leaf sounds
     [1.4,1.7,2.0,2.15,2.3,2.45,2.6,3.0].forEach(t=>rustle(t));
     // Crickets
     [2.5,3.5,4.2,5.5,7.0,9.0,12,15].forEach(t=>cricket(t));
