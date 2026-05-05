@@ -2265,7 +2265,9 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
   const locks = {
     pump: 0, light: 0, mist: 0, shed: 0, auto: 0
   };
-  const LOCK_DURATION = 10000; // 10 seconds lockout after manual action
+  // Increased from 10s to account for: 3 retries × 10-30s timeout + 3s total retry delays
+  // Worst case: first attempt (30s) + 2nd attempt (10s) + 3rd attempt (10s) = 50s, plus delays
+  const LOCK_DURATION = 60000; // 60 seconds lockout after manual action (covers worst-case retries)
 
   // ─── Helpers ───────────────────────────────────────────────────
   function fmt(val, decimals=1) {
