@@ -2571,30 +2571,48 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
       setControlBadge(key, 'override');
     }
 
-    try {
-      const body = {};
-      body[key] = value;
-      const res = await fetch(`${API_BASE}/control`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body),
-        signal:  AbortSignal.timeout(5000),
-      });
-      if (res.ok) {
-        showToast(
-          value ? "✅" : "⭕",
-          `${capitalize(key)} turned ${value ? "ON" : "OFF"}`
-        );
-      } else {
-        throw new Error(`HTTP ${res.status}`);
+    // Retry logic with exponential backoff for slow/cold backends
+    const maxRetries = 3;
+    let lastError = null;
+    let retryDelay = 2000;  // Start with 2 second delay
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const body = {};
+        body[key] = value;
+        const res = await fetch(`${API_BASE}/control`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify(body),
+          signal:  AbortSignal.timeout(30000),  // 30s timeout for cold starts
+        });
+        if (res.ok) {
+          showToast(
+            value ? "✅" : "⭕",
+            `${capitalize(key)} turned ${value ? "ON" : "OFF"}`
+          );
+          return;  // Success
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (err) {
+        lastError = err;
+        console.error(`[CONTROL] Attempt ${attempt}/${maxRetries} failed:`, err.message);
+        
+        if (attempt < maxRetries) {
+          console.log(`[CONTROL] Retrying in ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          retryDelay *= 2;  // Exponential backoff
+        }
       }
-    } catch (err) {
-      console.error("[CONTROL] Failed:", err);
-      showToast("❌", `Failed to control ${key}. Check connection.`, 4000);
-      // Revert toggle
-      controls[key] = !value;
-      updateControlUI(key, !value);
     }
+
+    // All retries failed
+    console.error("[CONTROL] All retries exhausted");
+    showToast("❌", `${key} control failed after ${maxRetries} attempts. Server may be unreachable.`, 5000);
+    // Revert toggle
+    controls[key] = !value;
+    updateControlUI(key, !value);
   }
 
   async function toggleAutoMode(isAuto) {
