@@ -2402,19 +2402,29 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
       setBar("bar-water-temp", ((data.water_temperature - 10) / 30) * 100);
 
       // ── pH ───────────────────────────────────────────────────
-      const pH = data.ph;
-      setVal("ph-value", fmt(pH, 2));
-      setBar("bar-ph", (pH / 14) * 100);
-      // Color-code pH: 5.5–7.0 ideal, red if out of range
-      const phEl = document.getElementById("ph-value");
-      if (phEl) {
-        if (pH < 5.0 || pH > 7.5) {
-          phEl.style.color = "var(--accent-red)";
-        } else if (pH >= 5.5 && pH <= 7.0) {
-          phEl.style.color = "var(--accent-green)";
-        } else {
-          phEl.style.color = "var(--accent-yellow)";
+      // Protect against missing or non-numeric pH values from the sensor
+      const pHraw = data.ph;
+      const pH = (pHraw === null || pHraw === undefined) ? NaN : Number(pHraw);
+      if (isFinite(pH)) {
+        setVal("ph-value", fmt(pH, 2));
+        setBar("bar-ph", (pH / 14) * 100);
+        // Color-code pH: 5.5–7.0 ideal, red if out of range
+        const phEl = document.getElementById("ph-value");
+        if (phEl) {
+          if (pH < 5.0 || pH > 7.5) {
+            phEl.style.color = "var(--accent-red)";
+          } else if (pH >= 5.5 && pH <= 7.0) {
+            phEl.style.color = "var(--accent-green)";
+          } else {
+            phEl.style.color = "var(--accent-yellow)";
+          }
         }
+      } else {
+        // Fallback UI when pH is unavailable
+        setVal("ph-value", "—");
+        setBar("bar-ph", 0);
+        const phEl = document.getElementById("ph-value");
+        if (phEl) phEl.style.color = "";
       }
 
       // ── TDS ──────────────────────────────────────────────────
