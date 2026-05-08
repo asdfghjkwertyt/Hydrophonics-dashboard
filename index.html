@@ -2299,10 +2299,10 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
 <script>
   // ─── Configuration ─────────────────────────────────────────────
   const API_BASE            = "https://hydrophonics-server-1.onrender.com";       // Empty = same origin; set to "http://192.168.1.100:5000" if separate
-  const SENSOR_INTERVAL_MS  = 2000;     // Fetch sensor data every 2 s
-  const AUTO_INTERVAL_MS    = 2000;     // Fetch autonomous status every 2 s
-  const AI_INTERVAL_MS      = 7000;     // Fetch AI result every 7 s
-  const IMAGE_INTERVAL_MS   = 12000;    // Refresh camera image every 12 s
+  const SENSOR_INTERVAL_MS  = 3000;     // Fetch sensor data every 3 s (was 2s — eases server load)
+  const AUTO_INTERVAL_MS    = 4000;     // Fetch autonomous status every 4 s
+  const AI_INTERVAL_MS      = 15000;    // Fetch AI result every 15 s
+  const IMAGE_INTERVAL_MS   = 15000;    // Refresh camera image every 15 s
 
   // ─── State ─────────────────────────────────────────────────────
   const controls = { pump: true, light: false, mist: false, shed: false };
@@ -2777,10 +2777,9 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
       setControlBadge(key, 'override');
     }
 
-    // Retry logic with exponential backoff for slow/cold backends
-    const maxRetries = 3;
-    let lastError = null;
-    let retryDelay = 2000;  // Start with 2 second delay
+    // Retry logic: 2 attempts with a short delay
+    const maxRetries = 2;
+    let retryDelay = 1500;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -2790,7 +2789,7 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify(body),
-          signal:  AbortSignal.timeout(30000),  // 30s timeout for cold starts
+          signal:  AbortSignal.timeout(6000),  // 6s — fast fail, don't block UI
         });
         if (res.ok) {
           showToast(
@@ -2802,13 +2801,9 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
           throw new Error(`HTTP ${res.status}`);
         }
       } catch (err) {
-        lastError = err;
-        console.error(`[CONTROL] Attempt ${attempt}/${maxRetries} failed:`, err.message);
-        
+        console.warn(`[CONTROL] Attempt ${attempt}/${maxRetries} failed:`, err.message);
         if (attempt < maxRetries) {
-          console.log(`[CONTROL] Retrying in ${retryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay));
-          retryDelay *= 2;  // Exponential backoff
         }
       }
     }
@@ -3168,7 +3163,8 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
   }
 
   // ─── Fetch History & Update All Charts ────────────────────────
-  const HISTORY_INTERVAL_MS = 5000;  // Refresh charts every 5 s
+  const HISTORY_INTERVAL_MS  = 10000;  // Charts every 10 s (was 5s)
+  const INSIGHTS_INTERVAL_MS = 25000;  // Insights every 25 s (was 8s)
 
   async function fetchAndUpdateCharts() {
     try {
@@ -3248,7 +3244,6 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
   }
 
   // ─── Fetch Insights & Update Patterns Tab ──────────────────────
-  const INSIGHTS_INTERVAL_MS = 8000;
 
   async function fetchAndUpdateInsights() {
     try {
@@ -3359,30 +3354,37 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
     // Init charts
     initCharts();
 
-    // Initial fetches
-    await Promise.all([
-      fetchSensorData(), fetchAIResult(), refreshCameraImage(),
-      fetchAutoStatus(), fetchAndUpdateCharts(), fetchAndUpdateInsights(),
-      fetchAndRenderPlants(),
-    ]);
+    // Initial fetches — staggered to avoid hammering cold server simultaneously
+    fetchSensorData();
+    await new Promise(r => setTimeout(r, 300));
+    fetchAutoStatus();
+    await new Promise(r => setTimeout(r, 300));
+    fetchAndRenderPlants();
+    await new Promise(r => setTimeout(r, 500));
+    fetchAndUpdateCharts();
+    await new Promise(r => setTimeout(r, 500));
+    fetchAIResult();
+    // Non-critical ones deferred further
+    setTimeout(refreshCameraImage,      2000);
+    setTimeout(fetchAndUpdateInsights,  3000);
 
     // WebSocket init
     initWebSocket();
 
     // Load tank configuration
     await loadTankConfig();
-    await loadMonthlyData();  // Load and display monthly analysis
+    await loadMonthlyData();
 
-    // Polling intervals
+    // Polling intervals — staggered starts to spread server load
     setInterval(fetchSensorData,          SENSOR_INTERVAL_MS);
-    setInterval(loadMonthlyData,          5 * 60 * 1000);  // Refresh monthly analysis every 5 minutes
-    setInterval(fetchAutoStatus,          AUTO_INTERVAL_MS);
-    setInterval(fetchAIResult,            AI_INTERVAL_MS);
-    setInterval(refreshCameraImage,       IMAGE_INTERVAL_MS);
-    setInterval(fetchAndUpdateCharts,     HISTORY_INTERVAL_MS);
-    setInterval(fetchAndUpdateInsights,   INSIGHTS_INTERVAL_MS);
-    setInterval(fetchPlantAlerts,         10000);   // Poll plant alerts every 10 s
-    setInterval(fetchAndRenderPlants,     30000);   // Refresh plant list every 30 s
+    setTimeout(() => setInterval(fetchAutoStatus, AUTO_INTERVAL_MS),          1200);
+    setTimeout(() => setInterval(fetchAIResult,            AI_INTERVAL_MS),   2100);
+    setTimeout(() => setInterval(refreshCameraImage,       IMAGE_INTERVAL_MS),2800);
+    setTimeout(() => setInterval(fetchAndUpdateCharts,     HISTORY_INTERVAL_MS), 3500);
+    setTimeout(() => setInterval(fetchAndUpdateInsights,   INSIGHTS_INTERVAL_MS),4200);
+    setTimeout(() => setInterval(fetchPlantAlerts,         15000),             5000);
+    setTimeout(() => setInterval(fetchAndRenderPlants,     60000),             6000);
+    setInterval(loadMonthlyData, 5 * 60 * 1000);
   })();
 
   // ═══════════════════════════════════════════════════════════════
