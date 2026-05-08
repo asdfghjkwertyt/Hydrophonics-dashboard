@@ -13,7 +13,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=SF+Pro+Display:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Socket.io -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
 
   <style>
     /* ─── Settings Button ──────────────────────────────── */
@@ -2305,6 +2308,7 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
   const controls = { pump: true, light: false, mist: false, shed: false };
   let lastImageTs  = null;
   let connectionOk = true;
+  let socket = null;
 
   // Track manual actions to prevent UI flicker (fighting with background fetch)
   const locks = {
@@ -2313,6 +2317,92 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
   // Increased from 10s to account for: 3 retries × 10-30s timeout + 3s total retry delays
   // Worst case: first attempt (30s) + 2nd attempt (10s) + 3rd attempt (10s) = 50s, plus delays
   const LOCK_DURATION = 60000; // 60 seconds lockout after manual action (covers worst-case retries)
+
+  // WebSocket Integration
+  function initWebSocket() {
+    console.log('[WS] Connecting to:', API_BASE);
+    socket = io(API_BASE);
+
+    socket.on('connect', () => {
+      console.log('[WS] Connected');
+      setConnectionStatus(true);
+      showToast('🔌', 'Real-time connection active');
+    });
+
+    socket.on('disconnect', () => {
+      console.warn('[WS] Disconnected');
+      setConnectionStatus(false);
+    });
+
+    socket.on('status_update', (data) => {
+      console.log('[WS] Update received:', data);
+      updateDashboardWithData(data);
+    });
+  }
+
+  function updateDashboardWithData(data) {
+    if (!data) return;
+
+    // Air Temp
+    if (data.air_temperature !== undefined) {
+      setVal("air-temp", fmt(data.air_temperature, 1), "°C");
+      setBar("bar-air-temp", ((data.air_temperature - 0) / 50) * 100);
+    }
+    // Humidity
+    if (data.humidity !== undefined) {
+      setVal("humidity", fmt(data.humidity, 1), "%");
+      setBar("bar-humidity", data.humidity);
+    }
+    // Water Temp
+    if (data.water_temperature !== undefined) {
+      setVal("water-temp", fmt(data.water_temperature, 1), "°C");
+      setBar("bar-water-temp", ((data.water_temperature - 10) / 30) * 100);
+    }
+    // pH
+    if (data.ph !== undefined) {
+      const pH = Number(data.ph);
+      if (!isNaN(pH)) {
+        setVal("ph-value", fmt(pH, 2));
+        setBar("bar-ph", (pH / 14) * 100);
+        const phEl = document.getElementById("ph-value");
+        if (phEl) {
+          if (pH < 5.0 || pH > 7.5) phEl.style.color = "var(--accent-red)";
+          else if (pH >= 5.5 && pH <= 7.0) phEl.style.color = "var(--accent-green)";
+          else phEl.style.color = "var(--accent-yellow)";
+        }
+      }
+    }
+    // TDS
+    if (data.tds !== undefined) {
+      setVal("tds-value", fmt(data.tds, 0), "ppm");
+      setBar("bar-tds", clamp((data.tds / 2000) * 100, 0, 100));
+    }
+    // Water Level
+    if (data.water_level !== undefined) {
+      const wlPct = Math.round(data.water_level);
+      const wlBar = document.getElementById("bar-water-level");
+      if (wlBar) {
+        wlBar.classList.add('tank-fill-animate');
+        wlBar.style.width = wlPct + "%";
+      }
+    }
+    // Sunlight
+    if (data.sunlight !== undefined) {
+      setVal("sunlight-value", Math.round(data.sunlight), "%");
+      setBar("bar-sunlight", data.sunlight);
+    }
+
+    // Actuators
+    ["pump", "light", "mist", "shed"].forEach(key => {
+      if (data[key] !== undefined && Date.now() > (locks[key] || 0)) {
+        updateControlUI(key, data[key]);
+        controls[key] = data[key];
+      }
+    });
+
+    updateSensorCardColors(data);
+    document.getElementById("last-update").textContent = "Updated " + new Date().toLocaleTimeString();
+  }
 
   // ─── Helpers ───────────────────────────────────────────────────
   function fmt(val, decimals=1) {
@@ -2348,6 +2438,21 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
     t.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove("show"), duration);
+  }
+
+  function setControlBadge(key, mode) {
+    const badge = document.getElementById(`badge-${key}`);
+    if (!badge) return;
+
+    if (key === 'pump') {
+      badge.className = 'auto-badge always-on';
+      badge.textContent = '● Always ON';
+      return;
+    }
+
+    const isOverride = mode === 'override';
+    badge.className = `auto-badge${isOverride ? ' override' : ''}`;
+    badge.textContent = isOverride ? '⚠ Override' : 'Auto';
   }
 
   // ─── Update Connection Status ──────────────────────────────────
@@ -2749,21 +2854,6 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
         badge.textContent = value ? "● OPEN" : "● CLOSED";
       }
     }
-  }
-
-  function setControlBadge(key, mode) {
-    const badge = document.getElementById(`badge-${key}`);
-    if (!badge) return;
-
-    if (key === 'pump') {
-      badge.className = 'auto-badge always-on';
-      badge.textContent = '● Always ON';
-      return;
-    }
-
-    const isOverride = mode === 'override';
-    badge.className = `auto-badge${isOverride ? ' override' : ''}`;
-    badge.textContent = isOverride ? '⚠ Override' : 'Auto';
   }
 
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -3249,6 +3339,9 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
       fetchAutoStatus(), fetchAndUpdateCharts(), fetchAndUpdateInsights(),
       fetchAndRenderPlants(),
     ]);
+
+    // WebSocket init
+    initWebSocket();
 
     // Load tank configuration
     await loadTankConfig();
