@@ -2306,12 +2306,9 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
 
   // ─── State ─────────────────────────────────────────────────────
   const controls = { pump: true, light: false, mist: false, shed: false };
-  const committedControls = { ...controls };
   let lastImageTs  = null;
   let connectionOk = true;
   let socket = null;
-  let controlSyncTimer = null;
-  let controlSyncInFlight = false;
 
   // Track manual actions to prevent UI flicker (fighting with background fetch)
   const locks = {
@@ -2770,6 +2767,19 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
 
   // ─── Control Toggles ───────────────────────────────────────────
   async function onToggleChange(key, value) {
+    // Manual actuator changes should not compete with Auto mode.
+    // If a user flips any non-pump control while Auto is enabled, switch to Manual first.
+    const autoToggle = document.getElementById('toggle-auto-mode');
+    if (key !== 'pump' && autoToggle && autoToggle.checked) {
+      await toggleAutoMode(false);
+      if (autoToggle.checked) {
+        showToast("❌", "Switch to Manual mode first to control actuators.", 4000);
+        controls[key] = !value;
+        updateControlUI(key, !value);
+        return;
+      }
+    }
+
     // Lock this control from background updates for a few seconds
     locks[key] = Date.now() + LOCK_DURATION;
     controls[key] = value;
@@ -2780,8 +2790,43 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
       setControlBadge(key, 'override');
     }
 
-    scheduleControlSync();
-    showToast(value ? "✅" : "⭕", `${capitalize(key)} set ${value ? "ON" : "OFF"}`);
+    // Retry logic: 2 attempts with a short delay
+    const maxRetries = 2;
+    let retryDelay = 1500;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const body = {};
+        body[key] = value;
+        const res = await fetch(`${API_BASE}/control`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify(body),
+          signal:  AbortSignal.timeout(6000),  // 6s — fast fail, don't block UI
+        });
+        if (res.ok) {
+          showToast(
+            value ? "✅" : "⭕",
+            `${capitalize(key)} turned ${value ? "ON" : "OFF"}`
+          );
+          return;  // Success
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (err) {
+        console.warn(`[CONTROL] Attempt ${attempt}/${maxRetries} failed:`, err.message);
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      }
+    }
+
+    // All retries failed
+    console.error("[CONTROL] All retries exhausted");
+    showToast("❌", `${key} control failed after ${maxRetries} attempts. Server may be unreachable.`, 5000);
+    // Revert toggle
+    controls[key] = !value;
+    updateControlUI(key, !value);
   }
 
   async function toggleAutoMode(isAuto) {
@@ -2826,71 +2871,6 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
       checkbox.checked = !checkbox.checked;
       onToggleChange(key, checkbox.checked);
     }
-  }
-
-  function scheduleControlSync() {
-    if (controlSyncTimer) {
-      clearTimeout(controlSyncTimer);
-    }
-    controlSyncTimer = setTimeout(() => {
-      controlSyncTimer = null;
-      syncControlState();
-    }, 120);
-  }
-
-  async function syncControlState() {
-    if (controlSyncInFlight) {
-      scheduleControlSync();
-      return;
-    }
-
-    controlSyncInFlight = true;
-    const payload = {
-      pump: controls.pump,
-      light: controls.light,
-      mist: controls.mist,
-      shed: controls.shed,
-    };
-
-    const maxRetries = 2;
-    let success = false;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const res = await fetch(`${API_BASE}/control`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(6000),
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        success = true;
-        break;
-      } catch (err) {
-        console.warn(`[CONTROL] Batch sync attempt ${attempt}/${maxRetries} failed:`, err.message);
-        if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-      }
-    }
-
-    if (success) {
-      Object.assign(committedControls, controls);
-    } else {
-      Object.assign(controls, committedControls);
-      updateControlUI('pump', controls.pump);
-      updateControlUI('light', controls.light);
-      updateControlUI('mist', controls.mist);
-      updateControlUI('shed', controls.shed);
-      console.error('[CONTROL] Batch sync failed; reverted to last committed state');
-      showToast('❌', 'Actuator sync failed. Reverted to last known state.', 5000);
-    }
-
-    controlSyncInFlight = false;
   }
 
   function updateControlUI(key, value) {
