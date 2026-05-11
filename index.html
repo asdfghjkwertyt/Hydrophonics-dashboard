@@ -2314,9 +2314,8 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
   const locks = {
     pump: 0, light: 0, mist: 0, shed: 0, auto: 0
   };
-  // Increased from 10s to account for: 3 retries × 10-30s timeout + 3s total retry delays
-  // Worst case: first attempt (30s) + 2nd attempt (10s) + 3rd attempt (10s) = 50s, plus delays
-  const LOCK_DURATION = 60000; // 60 seconds lockout after manual action (covers worst-case retries)
+  // Keep manual actions stable briefly, but let live state reconcile quickly.
+  const LOCK_DURATION = 8000; // 8 seconds is enough for retries + backend/ESP32 sync
 
   // WebSocket Integration (enhancement only — HTTP polling is the fallback)
   function initWebSocket() {
@@ -2350,6 +2349,12 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
         console.log('[WS] Push update received');
         updateDashboardWithData(data);
         // WS update arrived — mark live since we have fresh data
+        setConnectionStatus(true);
+      });
+
+      socket.on('control_event', (data) => {
+        console.log('[WS] Control update received');
+        updateDashboardWithData(data);
         setConnectionStatus(true);
       });
 
