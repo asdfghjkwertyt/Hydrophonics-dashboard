@@ -2259,6 +2259,14 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
         <div class="settings-field"><label>Shade CLOSE above %</label><input type="number" id="s-shed-close" step="1" min="0" max="100" /></div>
         <div class="settings-field"><label>Shade OPEN below %</label><input type="number" id="s-shed-open" step="1" min="0" max="100" /></div>
       </div>
+      <div class="settings-label">🏠 Shade servo angles</div>
+      <div class="settings-row">
+        <div class="settings-field"><label>Shade CLOSED angle</label><input type="number" id="s-shed-closed-angle" step="1" min="0" max="180" /></div>
+        <div class="settings-field"><label>Shade OPEN angle</label><input type="number" id="s-shed-open-angle" step="1" min="0" max="180" /></div>
+      </div>
+      <div style="font-size:0.68rem; color:var(--text-muted); margin-top:-0.15rem; line-height:1.35;">
+        Use these to match your servo's physical travel. Common starting values are 10° closed and 170° open.
+      </div>
     </div>
 
     <button class="btn-save" id="save-conditions-btn" onclick="saveConditions()">✓ Save All Conditions</button>
@@ -2284,6 +2292,10 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
         <div class="settings-field"><label>pH Max</label><input type="number" id="np-ph-max" step="0.1" placeholder="6.5" /></div>
         <div class="settings-field"><label>TDS Min</label><input type="number" id="np-tds-min" placeholder="500" /></div>
         <div class="settings-field"><label>TDS Max</label><input type="number" id="np-tds-max" placeholder="1000" /></div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-field"><label>Shed CLOSED angle</label><input type="number" id="np-shed-closed-angle" min="0" max="180" placeholder="10" /></div>
+        <div class="settings-field"><label>Shed OPEN angle</label><input type="number" id="np-shed-open-angle" min="0" max="180" placeholder="170" /></div>
       </div>
       <button class="btn-save btn-create" onclick="createNewPlant()">➕ Create Plant</button>
     </div>
@@ -3559,6 +3571,8 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
     set('s-light-off',  p.light_off_threshold  ?? 55);
     set('s-shed-close', p.shed_close_threshold ?? 70);
     set('s-shed-open',  p.shed_open_threshold  ?? 50);
+    set('s-shed-closed-angle', p.shed_closed_angle ?? 10);
+    set('s-shed-open-angle',    p.shed_open_angle   ?? 170);
   }
 
   // ─── Save edited conditions ───────────────────────────────────
@@ -3578,6 +3592,7 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
       water_level_warn:      getI('s-wl-warn'),  water_level_crit:      getI('s-wl-crit'),
       light_on_threshold:    getI('s-light-on'), light_off_threshold:   getI('s-light-off'),
       shed_close_threshold:  getI('s-shed-close'), shed_open_threshold: getI('s-shed-open'),
+      shed_closed_angle:     getI('s-shed-closed-angle'), shed_open_angle: getI('s-shed-open-angle'),
     };
     // Remove undefined keys
     Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
@@ -3834,6 +3849,8 @@ async function saveTankConfig() {
       humidity_min:    getNum('np-hum-min'),  humidity_max:    getNum('np-hum-max'),
       ph_min:          getNum('np-ph-min'),   ph_max:          getNum('np-ph-max'),
       tds_min:         getNum('np-tds-min'),  tds_max:         getNum('np-tds-max'),
+      shed_closed_angle: getNum('np-shed-closed-angle'),
+      shed_open_angle:   getNum('np-shed-open-angle'),
     };
 
     try {
@@ -3848,7 +3865,8 @@ async function saveTankConfig() {
         // Clear form
         ['new-plant-name','new-plant-key','new-plant-emoji',
          'np-temp-min','np-temp-max','np-hum-min','np-hum-max',
-         'np-ph-min','np-ph-max','np-tds-min','np-tds-max'].forEach(id => {
+         'np-ph-min','np-ph-max','np-tds-min','np-tds-max',
+         'np-shed-closed-angle','np-shed-open-angle'].forEach(id => {
           const el = document.getElementById(id); if (el) el.value = '';
         });
       } else {
