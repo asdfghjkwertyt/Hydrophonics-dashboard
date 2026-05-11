@@ -2767,19 +2767,6 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
 
   // ─── Control Toggles ───────────────────────────────────────────
   async function onToggleChange(key, value) {
-    // Manual actuator changes should not compete with Auto mode.
-    // If a user flips any non-pump control while Auto is enabled, switch to Manual first.
-    const autoToggle = document.getElementById('toggle-auto-mode');
-    if (key !== 'pump' && autoToggle && autoToggle.checked) {
-      await toggleAutoMode(false);
-      if (autoToggle.checked) {
-        showToast("❌", "Switch to Manual mode first to control actuators.", 4000);
-        controls[key] = !value;
-        updateControlUI(key, !value);
-        return;
-      }
-    }
-
     // Lock this control from background updates for a few seconds
     locks[key] = Date.now() + LOCK_DURATION;
     controls[key] = value;
