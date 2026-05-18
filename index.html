@@ -2327,7 +2327,9 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
     pump: 0, light: 0, mist: 0, shed: 0, auto: 0
   };
   // Keep manual actions stable briefly, but let live state reconcile quickly.
-  const LOCK_DURATION = 8000; // 8 seconds is enough for retries + backend/ESP32 sync
+  // FIX: Increased from 8s → 60s to prevent flicker during worst-case retry latency
+  // (server cold starts can take 30-50s, backend lock is 12s)
+  const LOCK_DURATION = 60000; // 60 seconds covers worst-case scenario
 
   // WebSocket Integration (enhancement only — HTTP polling is the fallback)
   function initWebSocket() {
