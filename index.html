@@ -2043,7 +2043,7 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
   <!-- ════════════════════════════════════
        MONTHLY ANALYSIS – Sensor Trends
   ════════════════════════════════════ -->
-  <section class="panel" id="monthly-analysis-section" style="display:none;">
+  <section class="panel" id="monthly-analysis-section">
     <div class="panel-header">
       <h2>📊 Monthly Sensor Analysis</h2>
       <p>Daily average trends over the last 30 days</p>
@@ -3705,6 +3705,8 @@ async function saveTankConfig() {
       const res = await fetch(`${API_BASE}/monthly-data?days=${days}`);
       if (!res.ok) {
         console.warn('[MONTHLY] Failed to load monthly data:', res.status);
+        const tbody = document.getElementById('monthly-table-body');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:1.5rem; color:var(--text-muted);">⚠️ Could not reach server — check your connection.</td></tr>';
         return;
       }
       
@@ -3713,11 +3715,19 @@ async function saveTankConfig() {
         console.warn('[MONTHLY] Invalid monthly data structure');
         return;
       }
+
+      // Empty-state: no rows in DB yet
+      if (data.labels.length === 0) {
+        const tbody = document.getElementById('monthly-table-body');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:1.5rem; color:var(--text-muted);">📭 No historical data yet — keep the system running and check back after 24 hours.</td></tr>';
+        return;
+      }
       
       // Update summary stats
       const updateStat = (elementId, values) => {
-        if (values && values.length > 0) {
-          const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        const valid = (values || []).filter(v => v !== null && v !== undefined);
+        if (valid.length > 0) {
+          const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
           const el = document.getElementById(elementId);
           if (el) el.textContent = avg.toFixed(1);
         }
@@ -3737,10 +3747,6 @@ async function saveTankConfig() {
       
       // Update Table
       updateMonthlyDataTable(data);
-      
-      // Show the section if hidden
-      const section = document.getElementById('monthly-analysis-section');
-      if (section) section.style.display = 'block';
       
     } catch (e) {
       console.error('[MONTHLY] Error loading data:', e);
