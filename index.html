@@ -2310,7 +2310,8 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
 ════════════════════════════════════════════════════════════ -->
 <script>
   // ─── Configuration ─────────────────────────────────────────────
-  const API_BASE            = "https://hydrophonics-server-1.onrender.com";       // Empty = same origin; set to "http://192.168.1.100:5000" if separate
+  const DEFAULT_API_BASE    = "https://hydrophonics-server-1.onrender.com"; // Preferred backend (change as needed)
+  let API_BASE              = DEFAULT_API_BASE; // Empty = same origin; set to "http://192.168.1.100:5000" if separate
   const SENSOR_INTERVAL_MS  = 3000;     // Fetch sensor data every 3 s (was 2s — eases server load)
   const AUTO_INTERVAL_MS    = 4000;     // Fetch autonomous status every 4 s
   const AI_INTERVAL_MS      = 15000;    // Fetch AI result every 15 s
@@ -2382,6 +2383,35 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
     } catch (e) {
       console.warn('[WS] Failed to init socket:', e);
       socket = null;
+    }
+  }
+
+  // ─── API Connectivity Detection & Fallback ─────────────────────────
+  async function detectApiBase(timeoutMs = 3000) {
+    // Check configured API_BASE first, then fall back to same-origin if it fails.
+    if (!API_BASE) return; // already same-origin
+    try {
+      const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(timeoutMs) });
+      if (res.ok) {
+        console.log('[API] Primary API_BASE reachable:', API_BASE);
+        return;
+      }
+      throw new Error('bad status ' + res.status);
+    } catch (err) {
+      console.warn('[API] Primary API_BASE failed:', API_BASE, err.message);
+      // Try same-origin as a fallback
+      try {
+        const res2 = await fetch(`/health`, { signal: AbortSignal.timeout(timeoutMs) });
+        if (res2.ok) {
+          API_BASE = '';
+          showToast('⚠', 'API: using same-origin fallback');
+          console.log('[API] Falling back to same-origin');
+          return;
+        }
+      } catch (e2) {
+        // ignore
+      }
+      showToast('⚠', 'API unreachable: ' + DEFAULT_API_BASE);
     }
   }
 
@@ -3372,6 +3402,9 @@ document.getElementById('ni-btn').addEventListener('click',()=>{
 
     // Init charts
     initCharts();
+
+    // Detect API base and fall back to same-origin if configured backend is unreachable
+    await detectApiBase();
 
     // Initial fetches — staggered to avoid hammering cold server simultaneously
     fetchSensorData();
