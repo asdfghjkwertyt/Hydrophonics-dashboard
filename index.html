@@ -3835,10 +3835,7 @@ async function saveTankConfig() {
     // ─── Create new custom plant ──────────────────────────────────
   async function createNewPlant() {
     const get    = id => document.getElementById(id)?.value?.trim();
-    const getNum = id => {
-      const raw = document.getElementById(id)?.value?.trim();
-      return raw === '' || raw === undefined ? undefined : parseFloat(raw);
-    };
+    const getNum = id => parseFloat(document.getElementById(id)?.value);
 
     const key  = get('new-plant-key')?.toLowerCase().replace(/\s+/g, '_');
     const name = get('new-plant-name');
